@@ -1,0 +1,12 @@
+[workspace]
+members = ["host-demo","runtime","guest-wasm", "packer"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "Apache-2.0"
+authors = ["Eduard Gevorkyan <egevorky@arencloud.com>"]
+description = "Tiny OTA-deliverable WASM runtime layer for embedded and edge devices."
+
+[patch.crates-io]
+wasm3-sys = { path = "vendor/wasm3-sys" }
