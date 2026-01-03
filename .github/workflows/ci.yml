@@ -42,6 +42,7 @@ jobs:
         feature-set:
           - "engine-wamr"
           - "engine-wasmtime-lite"
+          - "wasmtime-lite"
     steps:
       - uses: actions/checkout@v4
       - name: Install Rust
