@@ -87,9 +87,7 @@ fn platform_notes() {}
 #[cfg(all(feature = "esp-idf-storage", target_os = "espidf"))]
 pub mod esp_idf {
     use super::*;
-    use alloc::string::String;
-    use alloc::string::ToString;
-    use core::ptr;
+    use alloc::ffi::CString;
 
     pub struct PartitionFlash {
         part: *const esp_idf_sys::esp_partition_t,
@@ -109,7 +107,7 @@ pub mod esp_idf {
 
         /// Finds the first data partition matching label.
         pub fn from_label(label: &str) -> Result<Self> {
-            let c_label = alloc::ffi::CString::new(label).map_err(|_| Error::Engine("bad label"))?;
+            let c_label = CString::new(label).map_err(|_| Error::Engine("bad label"))?;
             let part = unsafe {
                 esp_idf_sys::esp_partition_find_first(
                     esp_idf_sys::esp_partition_type_t_ESP_PARTITION_TYPE_DATA,
@@ -165,6 +163,9 @@ pub mod esp_idf {
             unsafe { (*self.part).size as usize }
         }
     }
+
+    /// Convenience alias for a buffered store over an ESP-IDF partition.
+    pub type PartitionBufferedStore = FlashBufferedSource<PartitionFlash>;
 }
 
 /// STM32/QSPI flash-backed integration helper using function pointers.
@@ -205,6 +206,10 @@ pub mod stm32 {
             self.capacity
         }
     }
+
+    /// Convenience aliases for buffered/on-demand stores backed by HAL flash fns.
+    pub type HalBufferedStore = FlashBufferedSource<HalFlash>;
+    pub type HalOnDemandStore = FlashOnDemandSource<HalFlash>;
 }
 
 /// File-backed flash emulator for host testing. Not for production.
@@ -364,6 +369,7 @@ pub struct FlashOnDemandSource<IO: FlashIo> {
     base_offset: usize,
     len: usize,
     module_id: ModuleId,
+    scratch: alloc::vec::Vec<u8>,
 }
 
 #[cfg(feature = "alloc")]
@@ -374,6 +380,7 @@ impl<IO: FlashIo> FlashOnDemandSource<IO> {
             base_offset,
             len,
             module_id,
+            scratch: alloc::vec::Vec::new(),
         }
     }
 }
@@ -382,9 +389,15 @@ impl<IO: FlashIo> FlashOnDemandSource<IO> {
 impl<IO: FlashIo> ModuleSource for FlashOnDemandSource<IO> {
     fn fetch(&self, id: ModuleId) -> Option<&[u8]> {
         if id != self.module_id {
-            return None;
+            None
+        } else {
+            // fetch() cannot mutate scratch; use fetch_into to populate before calling.
+            if self.scratch.is_empty() {
+                None
+            } else {
+                Some(self.scratch.as_slice())
+            }
         }
-        None
     }
 }
 
@@ -399,6 +412,15 @@ impl<IO: FlashIo> FlashOnDemandSource<IO> {
             .read(self.base_offset, buf)
             .map_err(|_| Error::Engine("flash read failed"))?;
         Ok(buf)
+    }
+
+    /// Reads the module into the internal scratch buffer and returns it.
+    pub fn fetch_into_scratch(&mut self) -> Result<&[u8]> {
+        self.scratch.resize(self.len, 0);
+        self.io
+            .read(self.base_offset, self.scratch.as_mut_slice())
+            .map_err(|_| Error::Engine("flash read failed"))?;
+        Ok(self.scratch.as_slice())
     }
 }
 
@@ -518,5 +540,16 @@ mod tests {
         assert_eq!(buf, [9, 8, 7, 6]);
 
         let _ = fs::remove_file(tmp);
+    }
+
+    #[cfg(feature = "alloc")]
+    #[test]
+    fn flash_on_demand_reads_from_flash() {
+        let mut flash = MemoryFlash::new(8);
+        flash.erase_write(0, &[5, 6, 7, 8]).unwrap();
+
+        let mut source = FlashOnDemandSource::new(flash, 0, 4, 3);
+        let bytes = source.fetch_into_scratch().unwrap();
+        assert_eq!(bytes, &[5, 6, 7, 8]);
     }
 }

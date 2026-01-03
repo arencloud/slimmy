@@ -1,9 +1,6 @@
-//! Minimal WAMR interpreter-mode stub. Uses the C API via libc calls.
-//! This is intentionally small and avoids features beyond basic load/call.
-
+//! Minimal WAMR interpreter-mode placeholder. Replace with actual WAMR C API binding when available.
 use crate::{Engine, Error, ModuleId, Result};
 
-/// Minimal WAMR interpreter engine (placeholder).
 pub struct WamrEngine;
 
 impl WamrEngine {
