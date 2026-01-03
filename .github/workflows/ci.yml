@@ -49,3 +49,33 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Check engine stubs
         run: cargo check -p runtime --features "${{ matrix.feature-set }}"
+
+  wasm32:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust + wasm32 target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Build guest-wasm and runtime for wasm32
+        run: |
+          cargo build -p guest-wasm --target wasm32-unknown-unknown --release
+          cargo build -p runtime --target wasm32-unknown-unknown --no-default-features --features alloc
+
+  # Placeholders for platform cross builds; enable once toolchains are available.
+  espidf-cross:
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: TODO set up esp-idf toolchain and build with esp-idf-storage
+        run: echo "esp-idf cross build to be configured"
+
+  stm32-cross:
+    if: false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: TODO set up ARM GCC and build stm32-storage feature
+        run: echo "stm32 cross build to be configured"

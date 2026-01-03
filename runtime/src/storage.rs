@@ -170,6 +170,17 @@ pub mod esp_idf {
 
     /// Convenience alias for a buffered store over an ESP-IDF partition.
     pub type PartitionBufferedStore = FlashBufferedSource<PartitionFlash>;
+
+    /// Creates a buffered store from a partition label.
+    pub fn buffered_store_from_label(
+        label: &str,
+        base_offset: usize,
+        len: usize,
+        module_id: ModuleId,
+    ) -> Result<PartitionBufferedStore> {
+        let flash = PartitionFlash::from_label(label)?;
+        Ok(PartitionBufferedStore::new(flash, base_offset, len, module_id))
+    }
 }
 
 /// STM32/QSPI flash-backed integration helper using function pointers.
@@ -214,6 +225,32 @@ pub mod stm32 {
     /// Convenience aliases for buffered/on-demand stores backed by HAL flash fns.
     pub type HalBufferedStore = FlashBufferedSource<HalFlash>;
     pub type HalOnDemandStore = FlashOnDemandSource<HalFlash>;
+
+    /// Builds a buffered store from HAL callbacks.
+    pub fn buffered_store_from_hal(
+        erase_write: fn(usize, &[u8]) -> Result<()>,
+        read_fn: fn(usize, &mut [u8]) -> Result<()>,
+        capacity: usize,
+        base_offset: usize,
+        len: usize,
+        module_id: ModuleId,
+    ) -> HalBufferedStore {
+        let flash = HalFlash::new(erase_write, read_fn, capacity);
+        HalBufferedStore::new(flash, base_offset, len, module_id)
+    }
+
+    /// Builds an on-demand store from HAL callbacks.
+    pub fn on_demand_store_from_hal(
+        erase_write: fn(usize, &[u8]) -> Result<()>,
+        read_fn: fn(usize, &mut [u8]) -> Result<()>,
+        capacity: usize,
+        base_offset: usize,
+        len: usize,
+        module_id: ModuleId,
+    ) -> HalOnDemandStore {
+        let flash = HalFlash::new(erase_write, read_fn, capacity);
+        HalOnDemandStore::new(flash, base_offset, len, module_id)
+    }
 }
 
 /// File-backed flash emulator for host testing. Not for production.

@@ -11,7 +11,7 @@ Tiny OTA-deliverable WebAssembly runner for embedded targets (ESP32, STM32, nRF5
 - `runtime::engines::wasm3` – minimal wasm3 interpreter backend (`engine-wasm3` feature).
 - `runtime::engines::wamr` – stub feature (`engine-wamr`) for future integration.
 - `runtime::engines::wasmtime_lite` – host-only wasmtime backend for testing (`engine-wasmtime-lite`), not for MCU targets.
-- `runtime::storage` – memory-mapped helpers, `FlashIo` trait, `FlashBufferedSource`, `FlashOnDemandSource`, `MemoryFlash`/`FileFlash` for host tests, ESP-IDF (`esp-idf-storage`) and STM32 (`stm32-storage`) adapters.
+- `runtime::storage` – memory-mapped helpers, `FlashIo` trait, `FlashBufferedSource`, `FlashOnDemandSource`, `MemoryFlash`/`FileFlash` for host tests, ESP-IDF (`esp-idf-storage`) and STM32 (`stm32-storage`) adapters + builder helpers.
 - `host-demo/` – CLI harness; can run no-op engine or wasm3 (`--features wasm3`).
 - `guest-wasm/` – tiniest example module (`main()` no args/returns) built for `wasm32-unknown-unknown`.
 - `packer/` – host-side packer to wrap `.wasm` into manifest, optionally sign with Ed25519.
@@ -45,5 +45,5 @@ Tiny OTA-deliverable WebAssembly runner for embedded targets (ESP32, STM32, nRF5
 1) Wire real WAMR engine with size-tuned config (replace stub).
 2) Harden wasmtime-lite backend if kept (host-only) or replace with wasmtime-lite embedding.
 3) Flash-backed `ModuleSource` implementations (ESP-IDF partitions via `esp-idf-storage`, STM32 HAL erase/write-safe paths via `stm32-storage`).
-3) Hardened manifest toolchain: versioned manifest, signature policy, rollback guard.
-4) CI matrix for no_std + wasm3 + verify-ed25519 builds (added; extend to platform cross-checks).
+4) Hardened manifest toolchain: versioned manifest, signature policy, rollback guard.
+5) CI: extend to platform cross-checks (esp-idf, STM32) once toolchains are available.
