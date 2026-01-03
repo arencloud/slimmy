@@ -262,28 +262,61 @@ pub mod stm32 {
         erase_write: fn(usize, &[u8]) -> Result<()>,
         read_fn: fn(usize, &mut [u8]) -> Result<()>,
         capacity: usize,
+        erase_block: usize,
     }
 
     impl HalFlash {
+        /// Creates a HAL-backed flash device. `erase_block` set to 0 disables alignment checks.
         pub const fn new(
             erase_write: fn(usize, &[u8]) -> Result<()>,
             read_fn: fn(usize, &mut [u8]) -> Result<()>,
             capacity: usize,
+            erase_block: usize,
         ) -> Self {
             Self {
                 erase_write,
                 read_fn,
                 capacity,
+                erase_block,
             }
+        }
+
+        /// Convenience when alignment checks are handled in HAL.
+        pub const fn without_alignment(
+            erase_write: fn(usize, &[u8]) -> Result<()>,
+            read_fn: fn(usize, &mut [u8]) -> Result<()>,
+            capacity: usize,
+        ) -> Self {
+            Self::new(erase_write, read_fn, capacity, 0)
         }
     }
 
     impl FlashIo for HalFlash {
         fn erase_write(&mut self, offset: usize, data: &[u8]) -> Result<()> {
+            let end = offset
+                .checked_add(data.len())
+                .ok_or(Error::Engine("overflow offset"))?;
+            if end > self.capacity {
+                return Err(Error::Engine("write out of bounds"));
+            }
+            if self.erase_block != 0 {
+                if offset % self.erase_block != 0 {
+                    return Err(Error::Engine("erase offset not aligned"));
+                }
+                if data.len() % self.erase_block != 0 {
+                    return Err(Error::Engine("erase len not aligned"));
+                }
+            }
             (self.erase_write)(offset, data)
         }
 
         fn read(&self, offset: usize, buf: &mut [u8]) -> Result<()> {
+            let end = offset
+                .checked_add(buf.len())
+                .ok_or(Error::Engine("overflow offset"))?;
+            if end > self.capacity {
+                return Err(Error::Engine("read out of bounds"));
+            }
             (self.read_fn)(offset, buf)
         }
 
@@ -301,11 +334,12 @@ pub mod stm32 {
         erase_write: fn(usize, &[u8]) -> Result<()>,
         read_fn: fn(usize, &mut [u8]) -> Result<()>,
         capacity: usize,
+        erase_block: usize,
         base_offset: usize,
         len: usize,
         module_id: ModuleId,
     ) -> HalBufferedStore {
-        let flash = HalFlash::new(erase_write, read_fn, capacity);
+        let flash = HalFlash::new(erase_write, read_fn, capacity, erase_block);
         HalBufferedStore::new(flash, base_offset, len, module_id)
     }
 
@@ -314,11 +348,12 @@ pub mod stm32 {
         erase_write: fn(usize, &[u8]) -> Result<()>,
         read_fn: fn(usize, &mut [u8]) -> Result<()>,
         capacity: usize,
+        erase_block: usize,
         base_offset: usize,
         len: usize,
         module_id: ModuleId,
     ) -> HalOnDemandStore {
-        let flash = HalFlash::new(erase_write, read_fn, capacity);
+        let flash = HalFlash::new(erase_write, read_fn, capacity, erase_block);
         HalOnDemandStore::new(flash, base_offset, len, module_id)
     }
 }
