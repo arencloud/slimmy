@@ -699,3 +699,51 @@ mod tests {
         assert_eq!(bytes, &[5, 6, 7, 8]);
     }
 }
+
+// Extra coverage for stm32 feature (alignment + bounds).
+#[cfg(all(test, feature = "stm32-storage", feature = "std"))]
+mod stm32_tests {
+    use super::stm32::HalFlash;
+    use super::*;
+    use std::sync::{Mutex, OnceLock};
+
+    const CAP: usize = 16;
+    const ERASE_BLOCK: usize = 4;
+    static FLASH: OnceLock<Mutex<Vec<u8>>> = OnceLock::new();
+
+    fn backing() -> &'static Mutex<Vec<u8>> {
+        FLASH.get_or_init(|| Mutex::new(vec![0xFF; CAP]))
+    }
+
+    fn mock_erase_write(offset: usize, data: &[u8]) -> Result<()> {
+        let mut buf = backing().lock().unwrap();
+        let end = offset + data.len();
+        if end > CAP {
+            return Err(Error::Engine("write oob"));
+        }
+        buf[offset..end].copy_from_slice(data);
+        Ok(())
+    }
+
+    fn mock_read(offset: usize, buf: &mut [u8]) -> Result<()> {
+        let mut backing = backing().lock().unwrap();
+        let end = offset + buf.len();
+        if end > CAP {
+            return Err(Error::Engine("read oob"));
+        }
+        buf.copy_from_slice(&backing[offset..end]);
+        Ok(())
+    }
+
+    #[test]
+    fn hal_flash_alignment_checks() {
+        let mut flash = HalFlash::new(mock_erase_write, mock_read, CAP, ERASE_BLOCK);
+
+        // offset must be aligned
+        assert!(flash.erase_write(2, &[1, 2, 3, 4]).is_err());
+        // len must be aligned
+        assert!(flash.erase_write(4, &[1, 2, 3]).is_err());
+        // valid write succeeds
+        assert!(flash.erase_write(8, &[9, 9, 9, 9]).is_ok());
+    }
+}
