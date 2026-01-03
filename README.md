@@ -37,7 +37,7 @@ Tiny OTA-deliverable WebAssembly runner for embedded targets (ESP32, STM32, nRF5
 
 ## Target notes
 - ESP32 (esp-idf): wasm3 (`m3_config_platform_esp32`) or WAMR interpreter; modules in NVS/flash; use `esp-idf-svc` std shim. Storage helpers include `buffered_store_ota1` / `on_demand_store_ota1` (feature `esp-idf-storage`) targeting `ota_1` by default.
-- STM32 / nRF52: bare-metal `no_std + alloc`; interpreter mode; flash-backed `ModuleSource` with erase-aligned buffers. Use `HalFlash::new(erase_write, read, capacity, erase_block)` to enforce sector alignment (`erase_block=0` to skip check) and the builders `buffered_store_from_hal` / `on_demand_store_from_hal`.
+- STM32 / nRF52: bare-metal `no_std + alloc`; interpreter mode; flash-backed `ModuleSource` with erase-aligned buffers. Use `HalFlash::new(erase_write, read, capacity, erase_block)` to enforce sector alignment (`erase_block=0` to skip check) and the builders `buffered_store_from_hal` / `on_demand_store_from_hal`. Erase/write/read callbacks are plain `fn(usize, &[u8]) -> Result<()>` and `fn(usize, &mut [u8]) -> Result<()>`, with byte offsets relative to the module region.
 - RP2040: wasm3 fits; modules in XIP flash or littlefs; OTA via UF2 carrying only `.wasm`.
 - Linux/x86_64/aarch64: wasmtime-lite or wasm3 for integration tests.
 

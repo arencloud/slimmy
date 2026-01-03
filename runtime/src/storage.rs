@@ -258,6 +258,20 @@ pub mod esp_idf {
 pub mod stm32 {
     use super::*;
 
+    /// Connects STM32 HAL erase/write/read callbacks to the runtime.
+    ///
+    /// Example signatures to pass into `HalFlash::new`:
+    /// ```ignore
+    /// fn hal_erase_write(offset: usize, data: &[u8]) -> Result<()> {
+    ///     // call BSP/HAL to erase + program (offset in bytes from region base)
+    /// }
+    ///
+    /// fn hal_read(offset: usize, buf: &mut [u8]) -> Result<()> {
+    ///     // fill buf from flash/QSPI
+    /// }
+    /// let flash = HalFlash::new(hal_erase_write, hal_read, capacity_bytes, sector_size_bytes);
+    /// ```
+    /// Set `sector_size_bytes` to 0 if erase alignment is enforced elsewhere.
     pub struct HalFlash {
         erase_write: fn(usize, &[u8]) -> Result<()>,
         read_fn: fn(usize, &mut [u8]) -> Result<()>,
