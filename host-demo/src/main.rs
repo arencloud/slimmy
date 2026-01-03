@@ -1,7 +1,9 @@
 use runtime::{CachedEngine, MemoryStore, ModuleSource, Runtime};
-#[cfg(not(feature = "wasm3"))]
+#[cfg(all(feature = "wasm3", feature = "wasmtime-lite"))]
+compile_error!("Select only one engine feature at a time: wasm3 or wasmtime-lite.");
+#[cfg(not(any(feature = "wasm3", feature = "wasmtime-lite")))]
 use runtime::{Engine, Error, ModuleId};
-#[cfg(not(feature = "wasm3"))]
+#[cfg(not(any(feature = "wasm3", feature = "wasmtime-lite")))]
 use std::collections::HashMap;
 use std::env;
 use std::fs;
@@ -44,7 +46,7 @@ struct HostStats {
     last_size: usize,
 }
 
-#[cfg(not(feature = "wasm3"))]
+#[cfg(not(any(feature = "wasm3", feature = "wasmtime-lite")))]
 #[derive(Default)]
 struct NoopEngine {
     module_sizes: HashMap<ModuleId, usize>,
@@ -64,7 +66,21 @@ fn run_module(store: MemoryStore, entry: &str, module_size: usize) -> runtime::R
     })
 }
 
-#[cfg(not(feature = "wasm3"))]
+#[cfg(feature = "wasmtime-lite")]
+fn run_module(store: MemoryStore, entry: &str, module_size: usize) -> runtime::Result<HostStats> {
+    use runtime::engines::wasmtime_lite::WasmtimeLiteEngine;
+
+    let engine = CachedEngine::new(WasmtimeLiteEngine::new()?);
+    let mut runtime = Runtime::new(engine, store);
+
+    runtime.execute(1, entry, &mut ())?;
+    Ok(HostStats {
+        invocations: 1,
+        last_size: module_size,
+    })
+}
+
+#[cfg(not(any(feature = "wasm3", feature = "wasmtime-lite")))]
 fn run_module(store: MemoryStore, entry: &str, _module_size: usize) -> runtime::Result<HostStats> {
     let engine = CachedEngine::new(NoopEngine::default());
     let mut runtime = Runtime::new(engine, store);
@@ -74,7 +90,7 @@ fn run_module(store: MemoryStore, entry: &str, _module_size: usize) -> runtime::
     Ok(ctx)
 }
 
-#[cfg(not(feature = "wasm3"))]
+#[cfg(not(any(feature = "wasm3", feature = "wasmtime-lite")))]
 impl Engine for NoopEngine {
     type ModuleHandle = ModuleId;
     type Context = HostStats;

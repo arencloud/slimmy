@@ -9,6 +9,7 @@ description.workspace = true
 [features]
 default = []
 wasm3 = ["runtime/engine-wasm3"]
+wasmtime-lite = ["runtime/engine-wasmtime-lite"]
 
 [dependencies]
 runtime = { path = "../runtime" }

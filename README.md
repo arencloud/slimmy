@@ -21,6 +21,7 @@ Tiny OTA-deliverable WebAssembly runner for embedded targets (ESP32, STM32, nRF5
 - Run host demo (no-op): `cargo run -p host-demo -- guest-wasm/target/wasm32-unknown-unknown/release/guest_wasm.wasm main`
 - Run host demo with wasm3: `cargo run -p host-demo --features wasm3 -- guest-wasm/target/wasm32-unknown-unknown/release/guest_wasm.wasm main`
   - Requires `clang`; uses vendored `wasm3-sys` with build-bindgen.
+- Run host demo with wasmtime (host only): `cargo run -p host-demo --features wasmtime-lite -- guest-wasm/target/wasm32-unknown-unknown/release/guest_wasm.wasm main`
 - Pack manifest (unsigned): `cargo run -p packer -- guest-wasm/target/wasm32-unknown-unknown/release/guest_wasm.wasm -o module.smny`
 - Pack manifest (signed + flags): `cargo run -p packer -- --module-id 1 --entry main --sequence 7 --require-signature --sign-key-hex <32-byte-hex> guest-wasm/target/wasm32-unknown-unknown/release/guest_wasm.wasm -o module.smny.sig`
 - Run tests (no-op path): `cargo test`
