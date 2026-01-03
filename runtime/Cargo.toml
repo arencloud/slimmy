@@ -11,8 +11,14 @@ default = ["std"]
 std = ["alloc"]
 alloc = []
 engine-wasm3 = ["alloc", "wasm3"]
+engine-wamr = ["alloc"]
+engine-wasmtime-lite = ["alloc", "wasmtime"]
+esp-idf-storage = ["alloc", "esp-idf-sys"]
+stm32-storage = ["alloc"]
 verify-ed25519 = ["alloc", "ed25519-dalek"]
 
 [dependencies]
 wasm3 = { version = "0.3.1", default-features = false, optional = true, features = ["build-bindgen"] }
 ed25519-dalek = { version = "2.2.0", default-features = false, optional = true, features = ["alloc"] }
+esp-idf-sys = { version = "0.34", optional = true, default-features = false }
+wasmtime = { version = "19.0.0", default-features = false, features = ["cranelift"], optional = true }

@@ -76,8 +76,8 @@ pub struct Runtime<E, S> {
 }
 
 pub mod engines;
-pub mod storage;
 pub mod manifest;
+pub mod storage;
 
 impl<E, S> Runtime<E, S>
 where
@@ -90,11 +90,13 @@ where
     }
 
     /// Loads and runs a module entry point.
-    pub fn execute(&mut self, module_id: ModuleId, entry: &str, ctx: &mut E::Context) -> Result<()> {
-        let module_bytes = self
-            .source
-            .fetch(module_id)
-            .ok_or(Error::ModuleNotFound)?;
+    pub fn execute(
+        &mut self,
+        module_id: ModuleId,
+        entry: &str,
+        ctx: &mut E::Context,
+    ) -> Result<()> {
+        let module_bytes = self.source.fetch(module_id).ok_or(Error::ModuleNotFound)?;
         let handle = self.engine.load(module_id, module_bytes)?;
         self.engine.invoke(handle, entry, ctx)
     }
@@ -128,13 +130,18 @@ pub struct MemoryStore {
 impl MemoryStore {
     /// Creates an empty store.
     pub fn new() -> Self {
-        Self { modules: Vec::new() }
+        Self {
+            modules: Vec::new(),
+        }
     }
 
     /// Inserts or replaces a module.
     pub fn upsert(&mut self, id: ModuleId, bytes: impl Into<Vec<u8>>) {
         let bytes = bytes.into();
-        if let Some((_, existing)) = self.modules.iter_mut().find(|(stored_id, _)| *stored_id == id)
+        if let Some((_, existing)) = self
+            .modules
+            .iter_mut()
+            .find(|(stored_id, _)| *stored_id == id)
         {
             *existing = bytes;
         } else {

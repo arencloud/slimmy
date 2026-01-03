@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        feature-set:
+          - ""
+          - "wasm3"
+          - "wasm3 verify-ed25519"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Install clang for wasm3
+        run: sudo apt-get update && sudo apt-get install -y clang
+      - name: Build
+        run: cargo build --features "${{ matrix.feature-set }}"
+      - name: Test
+        run: cargo test --features "${{ matrix.feature-set }}"
+
+  no-std:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust + thumbv7em target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: thumbv7em-none-eabihf
+      - name: Build runtime no_std (alloc only)
+        run: cargo build -p runtime --no-default-features --features alloc --target thumbv7em-none-eabihf
+
+  engines:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        feature-set:
+          - "engine-wamr"
+          - "engine-wasmtime-lite"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Check engine stubs
+        run: cargo check -p runtime --features "${{ matrix.feature-set }}"
