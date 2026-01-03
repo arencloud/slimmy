@@ -50,6 +50,15 @@ jobs:
       - name: Check engine stubs
         run: cargo check -p runtime --features "${{ matrix.feature-set }}"
 
+  stm32-host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+      - name: Test stm32-storage host path
+        run: cargo test -p runtime --features "stm32-storage"
+
   wasm32:
     runs-on: ubuntu-latest
     steps:
