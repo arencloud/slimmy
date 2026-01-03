@@ -10,11 +10,15 @@
 
 use crate::{Error, ModuleId, ModuleSource, Result};
 #[cfg(feature = "std")]
-use std::fs::{OpenOptions};
+use std::fs::OpenOptions;
 #[cfg(feature = "std")]
 use std::io::{Read, Seek, SeekFrom, Write};
 #[cfg(feature = "std")]
 use std::path::PathBuf;
+#[cfg(all(feature = "esp-idf-storage", not(target_os = "espidf")))]
+compile_error!("Feature `esp-idf-storage` requires target_os=\"espidf\".");
+#[cfg(all(feature = "stm32-storage", target_os = "espidf"))]
+compile_error!("Feature `stm32-storage` is not compatible with espidf target.");
 
 /// Treats a single contiguous slice as one module with a fixed id.
 pub struct PartitionSliceSource<'a> {
