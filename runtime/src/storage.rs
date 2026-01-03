@@ -303,6 +303,15 @@ pub mod stm32 {
         ) -> Self {
             Self::new(erase_write, read_fn, capacity, 0)
         }
+
+        /// Returns len rounded up to the erase block (or unchanged when block==0).
+        pub const fn pad_len(&self, len: usize) -> usize {
+            if self.erase_block == 0 {
+                len
+            } else {
+                ((len + self.erase_block - 1) / self.erase_block) * self.erase_block
+            }
+        }
     }
 
     impl FlashIo for HalFlash {
@@ -759,5 +768,8 @@ mod stm32_tests {
         assert!(flash.erase_write(4, &[1, 2, 3]).is_err());
         // valid write succeeds
         assert!(flash.erase_write(8, &[9, 9, 9, 9]).is_ok());
+        // padding helper rounds to block
+        assert_eq!(flash.pad_len(3), 4);
+        assert_eq!(flash.pad_len(5), 8);
     }
 }
