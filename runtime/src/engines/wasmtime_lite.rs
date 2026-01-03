@@ -31,8 +31,8 @@ impl Engine for WasmtimeLiteEngine {
         if module.is_empty() {
             return Err(Error::Engine("wasmtime: empty module"));
         }
-        let compiled =
-            Module::from_binary(&self.engine, module).map_err(|_| Error::Engine("wasmtime compile"))?;
+        let compiled = Module::from_binary(&self.engine, module)
+            .map_err(|_| Error::Engine("wasmtime compile"))?;
         self.modules.insert(id, compiled);
         Ok(id)
     }
@@ -43,17 +43,15 @@ impl Engine for WasmtimeLiteEngine {
         entry: &str,
         _ctx: &mut Self::Context,
     ) -> Result<()> {
-        let module = self
-            .modules
-            .get(&handle)
-            .ok_or(Error::ModuleNotFound)?;
+        let module = self.modules.get(&handle).ok_or(Error::ModuleNotFound)?;
         let mut store = Store::new(&self.engine, ());
         let instance = Instance::new(&mut store, module, &[])
             .map_err(|_| Error::Engine("wasmtime instantiate"))?;
         let func = instance
             .get_typed_func::<(), ()>(&mut store, entry)
             .map_err(|_| Error::EntryNotFound)?;
-        func.call(&mut store, ()).map_err(|_| Error::Engine("wasmtime call"))?;
+        func.call(&mut store, ())
+            .map_err(|_| Error::Engine("wasmtime call"))?;
         Ok(())
     }
 }

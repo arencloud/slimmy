@@ -94,6 +94,10 @@ pub mod esp_idf {
     use alloc::ffi::CString;
     use core::ptr;
 
+    /// Default OTA data label we assume for staging next image.
+    pub const DEFAULT_OTA_LABEL: &str = "ota_1";
+    const ERASE_BLOCK: usize = 4096;
+
     pub struct PartitionFlash {
         part: *const esp_idf_sys::esp_partition_t,
     }
@@ -110,12 +114,12 @@ pub mod esp_idf {
             Ok(Self { part })
         }
 
-        /// Finds the first data partition matching label.
+        /// Finds the first app/OTA partition matching label.
         pub fn from_label(label: &str) -> Result<Self> {
             let c_label = CString::new(label).map_err(|_| Error::Engine("bad label"))?;
             let part = unsafe {
                 esp_idf_sys::esp_partition_find_first(
-                    esp_idf_sys::esp_partition_type_t_ESP_PARTITION_TYPE_DATA,
+                    esp_idf_sys::esp_partition_type_t_ESP_PARTITION_TYPE_APP,
                     esp_idf_sys::esp_partition_subtype_t_ESP_PARTITION_SUBTYPE_ANY,
                     c_label.as_ptr(),
                 )
@@ -125,12 +129,26 @@ pub mod esp_idf {
             }
             Ok(Self { part })
         }
+
+        pub fn size(&self) -> usize {
+            unsafe { (*self.part).size as usize }
+        }
     }
 
     impl FlashIo for PartitionFlash {
         fn erase_write(&mut self, offset: usize, data: &[u8]) -> Result<()> {
+            let end = offset
+                .checked_add(data.len())
+                .ok_or(Error::Engine("overflow offset"))?;
+            if end > self.capacity() {
+                return Err(Error::Engine("partition write out of bounds"));
+            }
+            let erase_len = ((data.len() + ERASE_BLOCK - 1) / ERASE_BLOCK) * ERASE_BLOCK;
+            if offset + erase_len > self.capacity() {
+                return Err(Error::Engine("partition erase out of bounds"));
+            }
             let res = unsafe {
-                esp_idf_sys::esp_partition_erase_range(self.part, offset as u32, data.len() as u32)
+                esp_idf_sys::esp_partition_erase_range(self.part, offset as u32, erase_len as u32)
             };
             if res != esp_idf_sys::esp_err_t_ESP_OK {
                 return Err(Error::Engine("partition erase failed"));
@@ -150,6 +168,12 @@ pub mod esp_idf {
         }
 
         fn read(&self, offset: usize, buf: &mut [u8]) -> Result<()> {
+            let end = offset
+                .checked_add(buf.len())
+                .ok_or(Error::Engine("overflow offset"))?;
+            if end > self.capacity() {
+                return Err(Error::Engine("partition read out of bounds"));
+            }
             let res = unsafe {
                 esp_idf_sys::esp_partition_read(
                     self.part,
@@ -180,12 +204,24 @@ pub mod esp_idf {
         module_id: ModuleId,
     ) -> Result<PartitionBufferedStore> {
         let flash = PartitionFlash::from_label(label)?;
-        Ok(PartitionBufferedStore::new(flash, base_offset, len, module_id))
+        Ok(PartitionBufferedStore::new(
+            flash,
+            base_offset,
+            len,
+            module_id,
+        ))
     }
 
-    /// Convenience helper that picks a small data partition (label "ota_1" by default).
+    /// Convenience helper that targets ota_1 by label.
     pub fn buffered_store_ota1(len: usize, module_id: ModuleId) -> Result<PartitionBufferedStore> {
-        buffered_store_from_label("ota_1", 0, len, module_id)
+        buffered_store_from_label(DEFAULT_OTA_LABEL, 0, len, module_id)
+    }
+
+    /// Same as `buffered_store_ota1` but automatically sizes to the whole partition.
+    pub fn buffered_store_ota1_full(module_id: ModuleId) -> Result<PartitionBufferedStore> {
+        let flash = PartitionFlash::from_label(DEFAULT_OTA_LABEL)?;
+        let len = flash.size();
+        Ok(PartitionBufferedStore::new(flash, 0, len, module_id))
     }
 
     /// Creates an on-demand store from a partition label (reads directly from flash each call).
@@ -200,8 +236,20 @@ pub mod esp_idf {
     }
 
     /// On-demand store targeting ota_1 partition.
-    pub fn on_demand_store_ota1(len: usize, module_id: ModuleId) -> Result<FlashOnDemandSource<PartitionFlash>> {
-        on_demand_store_from_label("ota_1", 0, len, module_id)
+    pub fn on_demand_store_ota1(
+        len: usize,
+        module_id: ModuleId,
+    ) -> Result<FlashOnDemandSource<PartitionFlash>> {
+        on_demand_store_from_label(DEFAULT_OTA_LABEL, 0, len, module_id)
+    }
+
+    /// On-demand ota_1 store sized to the whole partition.
+    pub fn on_demand_store_ota1_full(
+        module_id: ModuleId,
+    ) -> Result<FlashOnDemandSource<PartitionFlash>> {
+        let flash = PartitionFlash::from_label(DEFAULT_OTA_LABEL)?;
+        let len = flash.size();
+        Ok(FlashOnDemandSource::new(flash, 0, len, module_id))
     }
 }
 

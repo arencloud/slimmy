@@ -1,4 +1,4 @@
-//! Minimal WAMR interpreter-mode placeholder. Replace with actual WAMR C API binding when available.
+//! WAMR engine placeholder (still unsupported). Replace with a real integration when stable bindings are available.
 use crate::{Engine, Error, ModuleId, Result};
 
 pub struct WamrEngine;

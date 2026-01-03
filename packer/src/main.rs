@@ -63,9 +63,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let key_bytes = parse_hex_key(hex_key)?;
         let signing = ed25519_dalek::SigningKey::from_bytes(&key_bytes);
 
-        let preimage =
-            signing_preimage(args.module_id, &args.entry, &module_bytes, flags, args.sequence)
-                .map_err(to_io_error)?;
+        let preimage = signing_preimage(
+            args.module_id,
+            &args.entry,
+            &module_bytes,
+            flags,
+            args.sequence,
+        )
+        .map_err(to_io_error)?;
         let sig = signing.sign(&preimage).to_bytes();
         Some(sig)
     } else {
