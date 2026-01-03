@@ -92,6 +92,7 @@ fn platform_notes() {}
 pub mod esp_idf {
     use super::*;
     use alloc::ffi::CString;
+    use core::ptr;
 
     pub struct PartitionFlash {
         part: *const esp_idf_sys::esp_partition_t,
@@ -180,6 +181,27 @@ pub mod esp_idf {
     ) -> Result<PartitionBufferedStore> {
         let flash = PartitionFlash::from_label(label)?;
         Ok(PartitionBufferedStore::new(flash, base_offset, len, module_id))
+    }
+
+    /// Convenience helper that picks a small data partition (label "ota_1" by default).
+    pub fn buffered_store_ota1(len: usize, module_id: ModuleId) -> Result<PartitionBufferedStore> {
+        buffered_store_from_label("ota_1", 0, len, module_id)
+    }
+
+    /// Creates an on-demand store from a partition label (reads directly from flash each call).
+    pub fn on_demand_store_from_label(
+        label: &str,
+        base_offset: usize,
+        len: usize,
+        module_id: ModuleId,
+    ) -> Result<FlashOnDemandSource<PartitionFlash>> {
+        let flash = PartitionFlash::from_label(label)?;
+        Ok(FlashOnDemandSource::new(flash, base_offset, len, module_id))
+    }
+
+    /// On-demand store targeting ota_1 partition.
+    pub fn on_demand_store_ota1(len: usize, module_id: ModuleId) -> Result<FlashOnDemandSource<PartitionFlash>> {
+        on_demand_store_from_label("ota_1", 0, len, module_id)
     }
 }
 

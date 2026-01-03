@@ -36,7 +36,7 @@ Tiny OTA-deliverable WebAssembly runner for embedded targets (ESP32, STM32, nRF5
 - Manifest: magic `SMNY`, version 2 (flags + sequence + entry), optional 64-byte Ed25519 signature over header||module. Flags: bit0 require signature, bit1 rollback-protected (use sequence).
 
 ## Target notes
-- ESP32 (esp-idf): wasm3 (`m3_config_platform_esp32`) or WAMR interpreter; modules in NVS/flash; use `esp-idf-svc` std shim.
+- ESP32 (esp-idf): wasm3 (`m3_config_platform_esp32`) or WAMR interpreter; modules in NVS/flash; use `esp-idf-svc` std shim. Storage helpers include `buffered_store_ota1` / `on_demand_store_ota1` (feature `esp-idf-storage`) targeting `ota_1` by default.
 - STM32 / nRF52: bare-metal `no_std + alloc`; interpreter mode; flash-backed `ModuleSource` with erase-aligned buffers.
 - RP2040: wasm3 fits; modules in XIP flash or littlefs; OTA via UF2 carrying only `.wasm`.
 - Linux/x86_64/aarch64: wasmtime-lite or wasm3 for integration tests.
