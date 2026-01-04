@@ -47,3 +47,12 @@ Tiny OTA-deliverable WebAssembly runner for embedded targets (ESP32, STM32, nRF5
 3) Flash-backed `ModuleSource` implementations (ESP-IDF partitions via `esp-idf-storage`, STM32 HAL erase/write-safe paths via `stm32-storage`).
 4) Hardened manifest toolchain: versioned manifest, signature policy, rollback guard.
 5) CI: extend to platform cross-checks (esp-idf, STM32) once toolchains are available.
+
+## Hardware bring-up checklist
+- ESP32 (esp-idf): set `DEFAULT_OTA_LABEL` if not using `ota_1`; confirm erase block (defaults to 4 KiB) and adjust if needed. Build with `--features "esp-idf-storage wasm3"` under `esp-idf` target and load a `.smny` blob; verify read/write against the OTA partition.
+- STM32: hook `HalFlash::new(hal_erase_write, hal_read, capacity, sector_bytes)` with sector size; use `pad_len` when writing manifests/modules; validate alignment errors are surfaced when misaligned; run the stm32-storage host test job locally with `cargo test -p runtime --features stm32-storage`.
+- Sign + verify path: run `packer` with `--require-signature --sign-key-hex ...`, ensure target enables `verify-ed25519` and rejects tampered modules.
+
+## Cross toolchain notes (to enable later)
+- ESP-IDF: install `espup` or Espressif toolchain; set `RUSTFLAGS`/`ESP_IDF_VERSION`; build runtime with `--target xtensa-esp32-espidf --features "alloc esp-idf-storage wasm3"` once the toolchain is present.
+- STM32: install ARM GCC + build-std for `thumbv7em-none-eabihf`; `cargo build -p runtime --no-default-features --features "alloc stm32-storage" --target thumbv7em-none-eabihf` (CI cross job already present).
