@@ -44,6 +44,25 @@ Tiny OTA-deliverable WebAssembly runner for embedded targets (ESP32, STM32, nRF5
 - RP2040: wasm3 fits; modules in XIP flash or littlefs; OTA via UF2 carrying only `.wasm`.
 - Linux/x86_64/aarch64: wasmtime-lite or wasm3 for integration tests.
 
+## Architecture
+```
+      ┌────────────┐      ┌──────────┐      ┌───────────┐
+      │   Packer   │ ---> │ Manifest │ ---> │  Runtime  │
+      │ (host CLI) │      │ (.smny)  │      │ (device)  │
+      └────────────┘      └──────────┘      ├───────────┤
+           ^                                  │ Engine   │ (wasm3 / wasmtime-lite / WAMR stub)
+           |                                  │ ModuleSrc│ (flash/NVS/RAM)
+      ┌────────────┐                          │ Storage  │ (FlashIo, buffered/on-demand)
+      │ guest-wasm │ (wasm32 blob)            └───────────┘
+      └────────────┘
+
+Flow:
+- `guest-wasm` builds the tiny WASM payload (no_std, panic_abort) for wasm32.
+- `packer` wraps the wasm into a manifest (.smny), optional Ed25519 signing + flags/sequence.
+- On-device `runtime` reads manifest+module from storage (flash slice, partition, HAL) and dispatches via chosen engine (wasm3 on MCUs, wasmtime-lite on host).
+- Storage helpers map flash/ROM (ESP-IDF partitions, STM32 HAL callbacks, RAM/file for tests) into `ModuleSource` implementations.
+```
+
 ## Roadmap
 1) Wire real WAMR engine with size-tuned config (replace stub).
 2) Harden wasmtime-lite backend if kept (host-only) or replace with wasmtime-lite embedding.
