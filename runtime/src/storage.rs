@@ -92,8 +92,6 @@ fn platform_notes() {}
 pub mod esp_idf {
     use super::*;
     use alloc::ffi::CString;
-    use core::ptr;
-
     /// Default OTA data label we assume for staging next image.
     pub const DEFAULT_OTA_LABEL: &str = "ota_1";
     const ERASE_BLOCK: usize = 4096;
@@ -147,21 +145,20 @@ pub mod esp_idf {
             if offset + erase_len > self.capacity() {
                 return Err(Error::Engine("partition erase out of bounds"));
             }
-            let res = unsafe {
-                esp_idf_sys::esp_partition_erase_range(self.part, offset as u32, erase_len as u32)
-            };
-            if res != esp_idf_sys::esp_err_t_ESP_OK {
+            let res =
+                unsafe { esp_idf_sys::esp_partition_erase_range(self.part, offset, erase_len) };
+            if res != esp_idf_sys::ESP_OK {
                 return Err(Error::Engine("partition erase failed"));
             }
             let res = unsafe {
                 esp_idf_sys::esp_partition_write(
                     self.part,
-                    offset as u32,
+                    offset,
                     data.as_ptr() as *const _,
                     data.len(),
                 )
             };
-            if res != esp_idf_sys::esp_err_t_ESP_OK {
+            if res != esp_idf_sys::ESP_OK {
                 return Err(Error::Engine("partition write failed"));
             }
             Ok(())
@@ -177,12 +174,12 @@ pub mod esp_idf {
             let res = unsafe {
                 esp_idf_sys::esp_partition_read(
                     self.part,
-                    offset as u32,
+                    offset,
                     buf.as_mut_ptr() as *mut _,
                     buf.len(),
                 )
             };
-            if res != esp_idf_sys::esp_err_t_ESP_OK {
+            if res != esp_idf_sys::ESP_OK {
                 return Err(Error::Engine("partition read failed"));
             }
             Ok(())
