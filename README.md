@@ -5,6 +5,25 @@ Tiny OTA-deliverable WebAssembly runner for embedded targets (ESP32, STM32, nRF5
 **Author:** Eduard Gevorkyan `<egevorky@arencloud.com>`  
 **License:** Apache-2.0
 
+## Architecture
+```
+      ┌────────────┐      ┌──────────┐      ┌───────────┐
+      │   Packer   │ ---> │ Manifest │ ---> │  Runtime  │
+      │ (host CLI) │      │ (.smny)  │      │ (device)  │
+      └────────────┘      └──────────┘      ├───────────┤
+           ^                                  │ Engine   │ (wasm3 / wasmtime-lite / WAMR stub)
+           |                                  │ ModuleSrc│ (flash/NVS/RAM)
+      ┌────────────┐                          │ Storage  │ (FlashIo, buffered/on-demand)
+      │ guest-wasm │ (wasm32 blob)            └───────────┘
+      └────────────┘
+
+Flow:
+- `guest-wasm` builds the tiny WASM payload (no_std, panic_abort) for wasm32.
+- `packer` wraps the wasm into a manifest (.smny), optional Ed25519 signing + flags/sequence.
+- On-device `runtime` reads manifest+module from storage (flash slice, partition, HAL) and dispatches via chosen engine (wasm3 on MCUs, wasmtime-lite on host).
+- Storage helpers map flash/ROM (ESP-IDF partitions, STM32 HAL callbacks, RAM/file for tests) into `ModuleSource` implementations.
+```
+
 ## What’s inside
 - `runtime/` – no_std core traits (`Engine`, `ModuleSource`), `Runtime` orchestrator, `MemoryStore`, `CachedEngine`, storage helpers.
 - `runtime::manifest` – header (`SMNY` v2: flags + sequence) + optional Ed25519 verify (`verify-ed25519` feature); encode + signing preimage helpers.
@@ -43,25 +62,6 @@ Tiny OTA-deliverable WebAssembly runner for embedded targets (ESP32, STM32, nRF5
 - STM32 / nRF52: bare-metal `no_std + alloc`; interpreter mode; flash-backed `ModuleSource` with erase-aligned buffers. Use `HalFlash::new(erase_write, read, capacity, erase_block)` to enforce sector alignment (`erase_block=0` to skip check) and the builders `buffered_store_from_hal` / `on_demand_store_from_hal`. Erase/write/read callbacks are plain `fn(usize, &[u8]) -> Result<()>` and `fn(usize, &mut [u8]) -> Result<()>`, with byte offsets relative to the module region. Use `pad_len` to round payloads up to the erase block.
 - RP2040: wasm3 fits; modules in XIP flash or littlefs; OTA via UF2 carrying only `.wasm`.
 - Linux/x86_64/aarch64: wasmtime-lite or wasm3 for integration tests.
-
-## Architecture
-```
-      ┌────────────┐      ┌──────────┐      ┌───────────┐
-      │   Packer   │ ---> │ Manifest │ ---> │  Runtime  │
-      │ (host CLI) │      │ (.smny)  │      │ (device)  │
-      └────────────┘      └──────────┘      ├───────────┤
-           ^                                  │ Engine   │ (wasm3 / wasmtime-lite / WAMR stub)
-           |                                  │ ModuleSrc│ (flash/NVS/RAM)
-      ┌────────────┐                          │ Storage  │ (FlashIo, buffered/on-demand)
-      │ guest-wasm │ (wasm32 blob)            └───────────┘
-      └────────────┘
-
-Flow:
-- `guest-wasm` builds the tiny WASM payload (no_std, panic_abort) for wasm32.
-- `packer` wraps the wasm into a manifest (.smny), optional Ed25519 signing + flags/sequence.
-- On-device `runtime` reads manifest+module from storage (flash slice, partition, HAL) and dispatches via chosen engine (wasm3 on MCUs, wasmtime-lite on host).
-- Storage helpers map flash/ROM (ESP-IDF partitions, STM32 HAL callbacks, RAM/file for tests) into `ModuleSource` implementations.
-```
 
 ## Roadmap
 1) Wire real WAMR engine with size-tuned config (replace stub).
