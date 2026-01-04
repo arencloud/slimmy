@@ -22,7 +22,9 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Install clang for wasm3
-        run: sudo apt-get update && sudo apt-get install -y clang gcc-multilib libc6-dev-i386
+        run: sudo apt-get update && sudo apt-get install -y clang gcc-multilib libc6-dev-i386 libclang-dev llvm-dev
+      - name: Set libclang path
+        run: echo "LIBCLANG_PATH=$(llvm-config --libdir)" >> $GITHUB_ENV
       - name: Build
         run: cargo build --features "${{ matrix.feature-set }}"
       - name: Test
