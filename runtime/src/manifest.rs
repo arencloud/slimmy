@@ -147,6 +147,10 @@ impl<'a> Manifest<'a> {
             (None, remaining)
         };
 
+        if (flags & FLAG_REQUIRE_SIGNATURE) != 0 && signature.is_none() {
+            return Err(Error::Engine("manifest requires signature"));
+        }
+
         let raw_without_sig = &bytes[..entry_end];
         Ok((
             Manifest {
@@ -316,5 +320,21 @@ mod tests {
     fn rejects_bad_magic() {
         let bad = [0u8; HEADER_FIXED_V1];
         assert!(Manifest::parse(&bad).is_err());
+    }
+
+    #[test]
+    fn rejects_missing_sig_when_required() {
+        let mut buf = alloc::vec::Vec::new();
+        buf.extend_from_slice(MANIFEST_MAGIC);
+        buf.push(MANIFEST_VERSION);
+        buf.extend_from_slice(&1u32.to_le_bytes()); // module id
+        buf.extend_from_slice(&3u32.to_le_bytes()); // module len
+        buf.push(FLAG_REQUIRE_SIGNATURE);
+        buf.extend_from_slice(&0u32.to_le_bytes()); // sequence
+        buf.push(4u8); // entry len
+        buf.extend_from_slice(b"main");
+        buf.extend_from_slice(&[0u8; 3]); // module bytes (no signature)
+
+        assert!(Manifest::parse(&buf).is_err());
     }
 }
