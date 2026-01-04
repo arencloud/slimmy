@@ -89,13 +89,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: TODO set up esp-idf toolchain and build with esp-idf-storage
-        run: echo "esp-idf cross build to be configured"
+      - name: Install esp-idf toolchain (esp-rs)
+        run: |
+          cargo install espup
+          espup install
+          . $HOME/export-esp.sh
+      - name: Add rust target
+        run: rustup target add xtensa-esp32-espidf
+      - name: Build runtime with esp-idf-storage + wasm3
+        run: |
+          . $HOME/export-esp.sh
+          cargo build -p runtime --no-default-features --features "alloc esp-idf-storage wasm3" --target xtensa-esp32-espidf
 
   stm32-cross:
     if: false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: TODO set up ARM GCC and build stm32-storage feature
-        run: echo "stm32 cross build to be configured"
+      - name: Install Rust + thumbv7em target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: thumbv7em-none-eabihf
+      - name: Install ARM GCC (for linking)
+        run: sudo apt-get update && sudo apt-get install -y gcc-arm-none-eabi
+      - name: Build runtime with stm32-storage (alloc)
+        run: cargo build -p runtime --no-default-features --features "alloc stm32-storage" --target thumbv7em-none-eabihf
