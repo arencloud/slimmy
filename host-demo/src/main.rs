@@ -213,7 +213,7 @@ fn parse_hex32(hex: &str) -> Result<[u8; 32], Box<dyn std::error::Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use runtime::manifest::{encode, FLAG_REQUIRE_SIGNATURE};
+    use runtime::manifest::encode;
 
     #[test]
     fn loads_manifest_blob_without_verify() {
@@ -239,8 +239,7 @@ mod tests {
     fn require_verify_fails_without_feature() {
         let module = b"\x01\x02\x03";
         let sig = [0u8; 64];
-        let flags = FLAG_REQUIRE_SIGNATURE;
-        let blob = encode(1, "main", module, flags, 0, Some(sig)).unwrap();
+        let blob = encode(1, "main", module, 0, 0, Some(sig)).unwrap();
         let args = Args {
             path: PathBuf::from("module.smny"),
             entry: None,
