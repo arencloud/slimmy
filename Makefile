@@ -1,4 +1,5 @@
 .PHONY: esp-runtime
+.PHONY: test-host test-host-wasm3 all-tests
 
 # Paths to the espup toolchain bits. Adjust if you install a newer toolchain.
 ESP_EXPORT ?= $(HOME)/export-esp.sh
@@ -8,6 +9,7 @@ ESP_CLANG ?= $(HOME)/.rustup/toolchains/esp/xtensa-esp32-elf-clang/esp-20.1.1_20
 
 # Bindgen args to avoid host headers (`gnu/stubs-32.h`).
 ESP_BINDGEN_ARGS ?= -nostdinc -isystem$(ESP_GCCINC) -isystem$(ESP_SYSROOT)/include -isystem$(ESP_SYSROOT)/sys-include
+HOST_CLANG ?= /usr/bin/clang
 
 esp-runtime:
 	. $(ESP_EXPORT) && \
@@ -16,3 +18,17 @@ esp-runtime:
 	BINDGEN_EXTRA_CLANG_ARGS="$(ESP_BINDGEN_ARGS)" \
 	cargo +esp build -Zbuild-std=core,alloc --target xtensa-esp32-espidf \
 		-p runtime --no-default-features --features "alloc esp-idf-storage wasm3"
+
+# Host tests (no bindgen):
+test-host:
+	cargo test
+
+# Host tests with wasm3 + verify-ed25519; force system clang and clear extra bindgen flags.
+test-host-wasm3:
+	env -u BINDGEN_EXTRA_CLANG_ARGS \
+		CC=$(HOST_CLANG) \
+		BINDGEN_CLANG_PATH=$(HOST_CLANG) \
+		cargo test --features "wasm3 verify-ed25519"
+
+# Run both host test suites.
+all-tests: test-host test-host-wasm3
