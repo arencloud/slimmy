@@ -22,6 +22,7 @@ Tiny OTA-deliverable WebAssembly runner for embedded targets (ESP32, STM32, nRF5
 - Run host demo with wasm3: `cargo run -p host-demo --features wasm3 -- guest-wasm/target/wasm32-unknown-unknown/release/guest_wasm.wasm main`
   - Requires `clang`; uses vendored `wasm3-sys` with build-bindgen.
 - Run host demo with wasmtime (host only): `cargo run -p host-demo --features wasmtime-lite -- guest-wasm/target/wasm32-unknown-unknown/release/guest_wasm.wasm main`
+- Run host demo on a manifest blob (with signature verify): `cargo run -p host-demo --features "wasm3 verify-ed25519" -- --manifest --pubkey-hex <32-byte-hex> module.smny`
 - Pack manifest (unsigned): `cargo run -p packer -- guest-wasm/target/wasm32-unknown-unknown/release/guest_wasm.wasm -o module.smny`
 - Pack manifest (signed + flags): `cargo run -p packer -- --module-id 1 --entry main --sequence 7 --require-signature --sign-key-hex <32-byte-hex> guest-wasm/target/wasm32-unknown-unknown/release/guest_wasm.wasm -o module.smny.sig`
 - Pack with flash padding (e.g., 4 KiB erase blocks): add `--pad-to 4096` to the packer invocation.

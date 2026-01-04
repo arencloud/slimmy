@@ -10,6 +10,9 @@ description.workspace = true
 default = []
 wasm3 = ["runtime/engine-wasm3"]
 wasmtime-lite = ["runtime/engine-wasmtime-lite"]
+verify-ed25519 = ["runtime/verify-ed25519"]
 
 [dependencies]
 runtime = { path = "../runtime" }
+clap = { version = "4.5.17", features = ["derive"] }
+hex = "0.4"
