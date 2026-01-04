@@ -7,6 +7,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      CC: clang
+      BINDGEN_CLANG_PATH: /usr/bin/clang
+      BINDGEN_EXTRA_CLANG_ARGS: "--sysroot=/usr -isystem/usr/include -isystem/usr/include/x86_64-linux-gnu"
     strategy:
       matrix:
         feature-set:
@@ -18,7 +22,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
       - name: Install clang for wasm3
-        run: sudo apt-get update && sudo apt-get install -y clang
+        run: sudo apt-get update && sudo apt-get install -y clang gcc-multilib libc6-dev-i386
       - name: Build
         run: cargo build --features "${{ matrix.feature-set }}"
       - name: Test
