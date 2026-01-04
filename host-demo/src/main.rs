@@ -187,7 +187,7 @@ fn load_manifest_blob<'a>(
         }
         if let Some(hex) = args.pubkey_hex.as_deref() {
             let pk = parse_hex32(hex)?;
-            manifest::verify_ed25519(&manifest, &module_vec, &pk).map_err(to_io_error)?;
+            runtime::manifest::verify_ed25519(&manifest, &module_vec, &pk).map_err(to_io_error)?;
         }
     }
 
