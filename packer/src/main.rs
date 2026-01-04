@@ -40,12 +40,25 @@ struct Args {
     /// Monotonic sequence for rollback protection (sets rollback flag when >0)
     #[arg(long, default_value_t = 0)]
     sequence: u32,
+
+    /// Pad module to the next multiple of this many bytes (useful for flash erase blocks)
+    #[arg(long, value_name = "N")]
+    pad_to: Option<usize>,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    let module_bytes = fs::read(&args.module)?;
+    let mut module_bytes = fs::read(&args.module)?;
+    if let Some(block) = args.pad_to {
+        if block == 0 {
+            return Err("pad_to must be > 0".into());
+        }
+        let padded = pad_to(module_bytes.len(), block);
+        if padded > module_bytes.len() {
+            module_bytes.resize(padded, 0xFF);
+        }
+    }
 
     if args.require_signature && args.sign_key_hex.is_none() {
         return Err("require_signature set but no signing key provided".into());
@@ -93,12 +106,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fs::write(&out_path, blob)?;
 
     println!(
-        "✅ packed module: id={} entry={} signed={} seq={} flags=0x{:02x} -> {}",
+        "✅ packed module: id={} entry={} signed={} seq={} flags=0x{:02x} len={} -> {}",
         args.module_id,
         args.entry,
         signature.is_some(),
         args.sequence,
         flags,
+        module_bytes.len(),
         out_path.display()
     );
 
@@ -122,4 +136,25 @@ fn default_out_path(input: &PathBuf, signed: bool) -> PathBuf {
 
 fn to_io_error(err: runtime::Error) -> io::Error {
     io::Error::new(io::ErrorKind::Other, format!("manifest error: {err}"))
+}
+
+fn pad_to(len: usize, block: usize) -> usize {
+    if block == 0 {
+        len
+    } else {
+        ((len + block - 1) / block) * block
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::pad_to;
+
+    #[test]
+    fn pad_rounds_up() {
+        assert_eq!(pad_to(0, 4096), 0);
+        assert_eq!(pad_to(1, 4), 4);
+        assert_eq!(pad_to(4, 4), 4);
+        assert_eq!(pad_to(5, 4), 8);
+    }
 }
