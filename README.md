@@ -26,6 +26,7 @@ Tiny OTA-deliverable WebAssembly runner for embedded targets (ESP32, STM32, nRF5
 - Pack manifest (unsigned): `cargo run -p packer -- guest-wasm/target/wasm32-unknown-unknown/release/guest_wasm.wasm -o module.smny`
 - Pack manifest (signed + flags): `cargo run -p packer -- --module-id 1 --entry main --sequence 7 --require-signature --sign-key-hex <32-byte-hex> guest-wasm/target/wasm32-unknown-unknown/release/guest_wasm.wasm -o module.smny.sig`
 - Pack with flash padding (e.g., 4 KiB erase blocks): add `--pad-to 4096` to the packer invocation.
+- ESP32 (xtensa) build helper: `make esp-runtime` (uses espup toolchain, sets bindgen sysroot to avoid host headers).
 - Run tests (no-op path): `cargo test`
 - Run tests with wasm3 + verify-ed25519: `cargo test --features "wasm3 verify-ed25519"`
 

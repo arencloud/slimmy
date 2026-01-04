@@ -10,3 +10,4 @@ description = "Tiny OTA-deliverable WASM runtime layer for embedded and edge dev
 
 [patch.crates-io]
 wasm3-sys = { path = "vendor/wasm3-sys" }
+esp-idf-sys = { path = "patches/esp-idf-sys" }

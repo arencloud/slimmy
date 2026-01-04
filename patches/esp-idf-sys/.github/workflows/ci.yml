@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+  schedule:
+    - cron: "50 4 * * *"
+  workflow_dispatch:
+
+env:
+  rust_nightly_toolchain: nightly
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  compile:
+    name: Compile
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - riscv32imc-esp-espidf
+          - xtensa-esp32-espidf
+          - xtensa-esp32s2-espidf
+          - xtensa-esp32s3-espidf
+
+    steps:
+      - name: Setup | Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup | Rust
+        if: matrix.target == 'riscv32imc-esp-espidf'
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: ${{ env.rust_nightly_toolchain }}
+          components: rustfmt, clippy, rust-src
+
+      - name: Install Rust for Xtensa
+        if: matrix.target != 'riscv32imc-esp-espidf'
+        uses: esp-rs/xtensa-toolchain@v1.5.0
+        with:
+          default: true
+
+      - name: Build | Fmt Check
+        run: cargo fmt -- --check
+
+      - name: Build | Clippy (PIO)
+        if: matrix.target == 'riscv32imc-esp-espidf'
+        env:
+          RUSTFLAGS: "${{ '--cfg espidf_time64' }}"
+        run: cargo clippy --features pio --no-deps --target ${{ matrix.target }} -Zbuild-std=std,panic_abort -Zbuild-std-features=panic_immediate_abort -- -Dwarnings
+
+      - name: Build | Compile (Native) / ESP-IDF V4.4
+        env:
+          RUSTFLAGS: ""
+          ESP_IDF_VERSION: release/v4.4
+        run: cargo build --target ${{ matrix.target }} -Zbuild-std=std,panic_abort -Zbuild-std-features=panic_immediate_abort
+
+      - name: Build | Compile (Native) / ESP-IDF V5.0
+        env:
+          RUSTFLAGS: "${{ '--cfg espidf_time64' }}"
+          ESP_IDF_VERSION: release/v5.0
+        run: cargo clean; cargo build --target ${{ matrix.target }} -Zbuild-std=std,panic_abort -Zbuild-std-features=panic_immediate_abort
+
+      - name: Build | Compile (Native) / ESP-IDF V5.1
+        env:
+          RUSTFLAGS: "${{ '--cfg espidf_time64' }}"
+          ESP_IDF_VERSION: release/v5.1
+        run: cargo clean; cargo build --target ${{ matrix.target }} -Zbuild-std=std,panic_abort -Zbuild-std-features=panic_immediate_abort
+
+      - name: Setup | ldproxy
+        if: matrix.target == 'riscv32imc-esp-espidf'
+        run: |
+          curl -L https://github.com/esp-rs/embuild/releases/latest/download/ldproxy-x86_64-unknown-linux-gnu.zip -o $HOME/.cargo/bin/ldproxy.zip
+          unzip "$HOME/.cargo/bin/ldproxy.zip" -d "$HOME/.cargo/bin/"
+          chmod a+x $HOME/.cargo/bin/ldproxy
+
+      - name: Build | Examples
+        env:
+          RUSTFLAGS: "${{ '--cfg espidf_time64' }}"
+          ESP_IDF_SDKCONFIG_DEFAULTS: "${{ github.workspace }}/.github/configs/sdkconfig.defaults"
+          ESP_IDF_VERSION: release/v5.1
+        run: cargo build --examples --target ${{ matrix.target }} -Zbuild-std=std,panic_abort -Zbuild-std-features=panic_immediate_abort
