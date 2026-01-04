@@ -25,10 +25,10 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y clang gcc-multilib libc6-dev-i386 libclang-dev llvm-dev
       - name: Set libclang path
         run: echo "LIBCLANG_PATH=$(llvm-config --libdir)" >> $GITHUB_ENV
-      - name: Build
-        run: cargo build --features "${{ matrix.feature-set }}"
-      - name: Test
-        run: cargo test --features "${{ matrix.feature-set }}"
+      - name: Build (exclude guest-wasm on host)
+        run: cargo build --workspace --exclude guest-wasm --features "${{ matrix.feature-set }}"
+      - name: Test (exclude guest-wasm on host)
+        run: cargo test --workspace --exclude guest-wasm --features "${{ matrix.feature-set }}"
 
   no-std:
     runs-on: ubuntu-latest
