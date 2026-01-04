@@ -10,6 +10,7 @@
     all(not(feature = "std"), feature = "alloc_handler"),
     feature(alloc_error_handler)
 )]
+#![allow(unnecessary_transmutes)]
 
 pub use bindings::*;
 pub use error::*;

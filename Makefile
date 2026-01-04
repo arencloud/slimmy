@@ -11,6 +11,7 @@ ESP_BINDGEN_ARGS ?= -nostdinc -isystem$(ESP_GCCINC) -isystem$(ESP_SYSROOT)/inclu
 
 esp-runtime:
 	. $(ESP_EXPORT) && \
+	ESP_IDF_SYS_ROOT_CRATE=runtime \
 	BINDGEN_CLANG_PATH=$(ESP_CLANG) \
 	BINDGEN_EXTRA_CLANG_ARGS="$(ESP_BINDGEN_ARGS)" \
 	cargo +esp build -Zbuild-std=core,alloc --target xtensa-esp32-espidf \
