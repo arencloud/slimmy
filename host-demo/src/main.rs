@@ -209,3 +209,46 @@ fn parse_hex32(hex: &str) -> Result<[u8; 32], Box<dyn std::error::Error>> {
         .map_err(|_| "pubkey_hex must be 32 bytes".to_string())?;
     Ok(arr)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use runtime::manifest::{encode, FLAG_REQUIRE_SIGNATURE};
+
+    #[test]
+    fn loads_manifest_blob_without_verify() {
+        let module = b"\x01\x02\x03";
+        let entry = "main";
+        let blob = encode(1, entry, module, 0, 0, None).unwrap();
+        let args = Args {
+            path: PathBuf::from("module.smny"),
+            entry: None,
+            manifest: true,
+            pubkey_hex: None,
+            require_verify: false,
+        };
+
+        let (out_mod, out_entry, info) = load_manifest_blob(&args, &blob).unwrap();
+        assert_eq!(out_mod, module);
+        assert_eq!(out_entry, entry);
+        assert!(info.is_some());
+    }
+
+    #[cfg(not(feature = "verify-ed25519"))]
+    #[test]
+    fn require_verify_fails_without_feature() {
+        let module = b"\x01\x02\x03";
+        let sig = [0u8; 64];
+        let flags = FLAG_REQUIRE_SIGNATURE;
+        let blob = encode(1, "main", module, flags, 0, Some(sig)).unwrap();
+        let args = Args {
+            path: PathBuf::from("module.smny"),
+            entry: None,
+            manifest: true,
+            pubkey_hex: None,
+            require_verify: true,
+        };
+
+        assert!(load_manifest_blob(&args, &blob).is_err());
+    }
+}
