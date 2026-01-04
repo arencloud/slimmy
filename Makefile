@@ -10,6 +10,7 @@ ESP_CLANG ?= $(HOME)/.rustup/toolchains/esp/xtensa-esp32-elf-clang/esp-20.1.1_20
 # Bindgen args to avoid host headers (`gnu/stubs-32.h`).
 ESP_BINDGEN_ARGS ?= -nostdinc -isystem$(ESP_GCCINC) -isystem$(ESP_SYSROOT)/include -isystem$(ESP_SYSROOT)/sys-include
 HOST_CLANG ?= /usr/bin/clang
+HOST_SYSROOT ?= $(shell gcc -print-sysroot)
 
 esp-runtime:
 	. $(ESP_EXPORT) && \
@@ -25,7 +26,7 @@ test-host:
 
 # Host tests with wasm3 + verify-ed25519; force system clang and clear extra bindgen flags.
 test-host-wasm3:
-	env -u BINDGEN_EXTRA_CLANG_ARGS \
+	env BINDGEN_EXTRA_CLANG_ARGS="--sysroot=$(HOST_SYSROOT) -isystem/usr/include -isystem/usr/include/x86_64-linux-gnu -march=x86-64" \
 		CC=$(HOST_CLANG) \
 		BINDGEN_CLANG_PATH=$(HOST_CLANG) \
 		cargo test --features "wasm3 verify-ed25519"
